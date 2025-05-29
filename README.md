@@ -1,6 +1,6 @@
 # Football League Simulator
 
-This project is a Go application that simulates a 4-team football league. It can run both in console mode and as an HTTP API server.
+This project is a Go application that simulates a 4-team football league with Premier League rules. It can run both in console mode and as an HTTP API server with SQLite database persistence.
 
 ## Installation
 
@@ -117,18 +117,19 @@ curl -X PUT http://localhost:8080/league/matches/1 \
 
 ## Features
 
-- Realistic match simulation based on team strength
-- Home advantage calculation
-- Championship predictions from week 4 onwards
-- JSON API responses
-- SQLite database persistence
-- Edit match results functionality
-- Testable architecture using interfaces
-- Gorilla Mux router usage
+- ✅ Realistic match simulation based on team strength and home advantage
+- ✅ Championship predictions from week 4 onwards (intelligent algorithm)
+- ✅ Complete REST API with JSON responses
+- ✅ SQLite database persistence with automatic initialization
+- ✅ Edit match results functionality with automatic recalculation
+- ✅ Interface-based testable architecture
+- ✅ Both console and server modes
+- ✅ Docker containerization support
+- ✅ Professional logging and error handling
 
 ## Database Schema
 
-The application uses SQLite with the following tables:
+The application uses SQLite with automatic initialization. Tables:
 
 ### teams
 
@@ -177,8 +178,8 @@ CREATE TABLE league_state (
 ### Local Development
 
 ```bash
-git clone <repository>
-cd insider
+git clone https://github.com/Melotachi/GoLeagueMelo.git
+cd GoLeagueMelo
 go mod tidy
 go build
 ./main server
@@ -186,48 +187,58 @@ go build
 
 ### Docker Deployment
 
-Create a `Dockerfile`:
-
-```dockerfile
-FROM golang:1.24-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o main .
-
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/main .
-EXPOSE 8080
-CMD ["./main", "server"]
-```
-
-Build and run:
+The application includes a multi-stage Dockerfile with CGO enabled for SQLite support.
 
 ```bash
+# Build the image
 docker build -t football-league .
+
+# Run the container
 docker run -p 8080:8080 football-league
 ```
 
-### Cloud Deployment (Heroku)
+**Docker Features:**
 
-Create a `Procfile`:
+- Multi-stage build for smaller final image
+- CGO enabled for SQLite compatibility
+- Automatic database initialization
+- Alpine Linux base for security and size
+- Exposed on port 8080
 
-```
-web: ./main server
-```
+### Testing the API
 
-Deploy:
+After starting the server, test the endpoints:
 
 ```bash
-heroku create your-app-name
-git push heroku main
+# Get initial league table
+curl http://localhost:8080/league/table
+
+# Simulate one week
+curl -X POST http://localhost:8080/league/next-week
+
+# Get matches for week 1
+curl "http://localhost:8080/league/matches?week=1"
+
+# Edit a match result (after playing some matches)
+curl -X PUT http://localhost:8080/league/matches/1 \
+  -H "Content-Type: application/json" \
+  -d '{"home_score": 2, "away_score": 1}'
+
+# Simulate all remaining matches
+curl -X POST http://localhost:8080/league/play-all
 ```
+
+## Architecture
+
+The project follows clean architecture principles:
+
+- **Interfaces**: `SimulatorService`, `StorageService` for testability
+- **Separation of Concerns**: Business logic, HTTP handlers, and storage are separated
+- **Dependency Injection**: Services are injected where needed
+- **Error Handling**: Comprehensive error handling with proper HTTP status codes
 
 ## Dependencies
 
-- `github.com/gorilla/mux` - For HTTP routing
-- `github.com/mattn/go-sqlite3` - SQLite database driver
-- `github.com/lib/pq` - PostgreSQL driver (optional)
+- `github.com/gorilla/mux` - HTTP routing and middleware
+- `github.com/mattn/go-sqlite3` - SQLite database driver (requires CGO)
+- `github.com/lib/pq` - PostgreSQL driver (optional, for future PostgreSQL support)
