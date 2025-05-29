@@ -199,22 +199,8 @@ func updateLeagueTable(league *League){
 	// at each week, the league table is deleted and recreated
 	league.LeagueTable = []*LeagueTableEntry{}
 	
-	// If we have a storage service, get fresh team data from database
-	var teamsToUse []*Team
-	if storageService != nil {
-		freshTeams, err := storageService.GetTeams()
-		if err == nil {
-			teamsToUse = freshTeams
-			// Update league teams with fresh data
-			league.Teams = freshTeams
-		} else {
-			teamsToUse = league.Teams
-		}
-	} else {
-		teamsToUse = league.Teams
-	}
-	
-	for _, team := range teamsToUse {
+	// Use the current team data from memory (not database during simulation)
+	for _, team := range league.Teams {
 		leagueTableEntry := LeagueTableEntry{
 			TeamName: team.TeamName,
 			Played: team.Wins + team.Draws + team.Losses,
@@ -229,9 +215,15 @@ func updateLeagueTable(league *League){
 		league.LeagueTable = append(league.LeagueTable, &leagueTableEntry)
 	}
 	
+	// Sort by points (descending), then by goal difference (descending)
 	sort.Slice(league.LeagueTable, func(i, j int) bool {
+		if league.LeagueTable[i].Points == league.LeagueTable[j].Points {
+			return league.LeagueTable[i].GoalsDifference > league.LeagueTable[j].GoalsDifference
+		}
 		return league.LeagueTable[i].Points > league.LeagueTable[j].Points
 	})
+	
+	// Assign positions
 	for i, entry := range league.LeagueTable {
 		entry.Position = i + 1
 	}
