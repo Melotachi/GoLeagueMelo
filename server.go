@@ -53,6 +53,9 @@ func (s *LeagueSimulatorService) SimulateNextWeek() error {
 	
 	weeklySimulator(s.league)
 	
+	// Update league table after simulation
+	updateLeagueTable(s.league)
+	
 	// Save updated data to database
 	if storageService != nil {
 		// Update current week
@@ -117,6 +120,9 @@ func (s *LeagueSimulatorService) SimulateAllMatches() error {
 			}
 		}
 	}
+	
+	// Update league table after all simulations
+	updateLeagueTable(s.league)
 	
 	return nil
 }
