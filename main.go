@@ -199,20 +199,61 @@ func updateLeagueTable(league *League){
 	// at each week, the league table is deleted and recreated
 	league.LeagueTable = []*LeagueTableEntry{}
 	
-	// Use the current team data from memory (not database during simulation)
-	for _, team := range league.Teams {
-		leagueTableEntry := LeagueTableEntry{
-			TeamName: team.TeamName,
-			Played: team.Wins + team.Draws + team.Losses,
-			Wins: team.Wins,
-			Draws: team.Draws,
-			Losses: team.Losses,
-			GoalsFor: team.GoalsFor,
-			GoalsAgainst: team.GoalsAgainst,
-			GoalsDifference: team.GoalsFor - team.GoalsAgainst,
-			Points: team.Points,
+	// Collect stats from matches instead of team objects
+	teamStats := make(map[string]*LeagueTableEntry)
+	
+	// Initialize with team names
+	teamNames := []string{"Manchester United", "Liverpool", "Manchester City", "Chelsea"}
+	for _, name := range teamNames {
+		teamStats[name] = &LeagueTableEntry{
+			TeamName: name,
+			Played: 0,
+			Wins: 0,
+			Draws: 0,
+			Losses: 0,
+			GoalsFor: 0,
+			GoalsAgainst: 0,
+			GoalsDifference: 0,
+			Points: 0,
 		}
-		league.LeagueTable = append(league.LeagueTable, &leagueTableEntry)
+	}
+	
+	// Calculate stats from played matches
+	for _, match := range league.Matches {
+		if match.Played {
+			homeEntry := teamStats[match.HomeTeam.TeamName]
+			awayEntry := teamStats[match.AwayTeam.TeamName]
+			
+			homeEntry.Played++
+			awayEntry.Played++
+			homeEntry.GoalsFor += match.HomeTeamScore
+			homeEntry.GoalsAgainst += match.AwayTeamScore
+			awayEntry.GoalsFor += match.AwayTeamScore
+			awayEntry.GoalsAgainst += match.HomeTeamScore
+			
+			if match.HomeTeamScore > match.AwayTeamScore {
+				homeEntry.Wins++
+				homeEntry.Points += 3
+				awayEntry.Losses++
+			} else if match.HomeTeamScore < match.AwayTeamScore {
+				awayEntry.Wins++
+				awayEntry.Points += 3
+				homeEntry.Losses++
+			} else {
+				homeEntry.Draws++
+				awayEntry.Draws++
+				homeEntry.Points += 1
+				awayEntry.Points += 1
+			}
+			
+			homeEntry.GoalsDifference = homeEntry.GoalsFor - homeEntry.GoalsAgainst
+			awayEntry.GoalsDifference = awayEntry.GoalsFor - awayEntry.GoalsAgainst
+		}
+	}
+	
+	// Convert map to slice
+	for _, entry := range teamStats {
+		league.LeagueTable = append(league.LeagueTable, entry)
 	}
 	
 	// Sort by points (descending), then by goal difference (descending)
